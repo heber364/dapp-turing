@@ -27,7 +27,8 @@ export default function Home() {
   const [users, setUsers] = useState<{ codename: string; address: string; turing: string }[]>([]);
 
   useEffect(() => {
-    const newProvider = new ethers.providers.JsonRpcProvider(LOCAL_BLOCKCHAIN_URL);
+    const newProvider = new ethers.providers.Web3Provider(window.ethereum);
+    //const newProvider = new ethers.providers.JsonRpcProvider(LOCAL_BLOCKCHAIN_URL);
     const newSigner = newProvider.getSigner();
     console.log(newSigner);
     setProvider(newProvider);
@@ -109,7 +110,7 @@ export default function Home() {
     } catch (error: any) {
       const errorMessage = getErrorMessage(error)
       toast.error(errorMessage ?? "Ocorreu um erro desconhecido.");
-      console.log(error)
+      console.log(JSON.stringify(error))
     }
 
   }

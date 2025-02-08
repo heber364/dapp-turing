@@ -6,23 +6,39 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Turing is ERC20 {
     address private owner;
-    address public professor;
+    address private professor;
     bool private votingEnabled;
-    uint256 private constant turing = 1e18; // 10^18 saTuring = 1 Turing
+    uint256 private constant turing = 1e18;
     uint private constant MAX_VOTES = 2;
+
+    string[18] codenames;
+    mapping(address => bool) private isAuthorized;
+    mapping(string => address) private codenameToAddress;
+    mapping(address => uint) private totalVotes;
+    mapping(address => mapping(address => bool)) private hasVotedFor;
+
+    string constant ERR_NOT_AUTHORIZED =
+        "Usuario nao autorizado a executar esta acao.";
+    string constant ERR_VOTING_DISABLED =
+        "A votacao esta desativada no momento.";
+    string constant ERR_VOTE_LIMIT_REACHED =
+        "Voce ja utilizou todos os seus votos disponiveis.";
+    string constant ERR_NOT_A_VALID_USER =
+        "Acao invalida: o codinome nao eh de um usuario valido.";
+    string constant ERR_CANNOT_VOTE_SELF = "Voce nao pode votar em si mesmo.";
+    string constant ERR_DUPLICATE_VOTE =
+        "Voto invalido: nao eh permitido votar duas vezes no mesmo candidato.";
+    string constant ERR_MAX_TURINGS_EXCEEDED =
+        "Limite excedido: o maximo permitido eh 2 Turings.";
+    string constant ERR_ONLY_OWNER_OR_PROFESSOR =
+        "Apenas o owner ou a professora podem executar esta acao.";
 
     event VoteCast(address recipient, string codename, uint256 amount);
     event IssueTokenCast(address recipient, string codename, uint256 amount);
-    
-    string[18] codenames;
-    mapping(address => bool) private isAuthorized; // Controla usuários autorizados
-    mapping(string => address) public codenameToAddress;
-    mapping(address => uint) private totalVotes; // Total de votos que cada usuário realizou
-    mapping(address => mapping(address => bool)) private hasVotedFor; // Armazena se um usuário já votou em outro
 
     constructor() ERC20("Turing Token", "TUR") {
-        professor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
-        owner = msg.sender;
+        professor = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // Segundo endereço 
+        owner = msg.sender; // Primeiro endereço
         votingEnabled = true;
 
         codenames = [
@@ -74,8 +90,12 @@ contract Turing is ERC20 {
         }
     }
 
-    function getAddressesAndBalances() external view returns (string[] memory, address[] memory, uint256[] memory) {
-        uint256 length = 18; // Since we know there are 18 addresses
+    function getAddressesAndBalances()
+        external
+        view
+        returns (string[] memory, address[] memory, uint256[] memory)
+    {
+        uint256 length = 18;
         address[] memory addresses = new address[](length);
         uint256[] memory balances = new uint256[](length);
         string[] memory names = new string[](length);
@@ -91,35 +111,32 @@ contract Turing is ERC20 {
     }
 
     function issueToken(
-        string memory codinome,
-        uint256 quantidade
+        string memory codename,
+        uint256 qtd
     ) external onlyOwnerOrProfessor {
-        address recipient = codenameToAddress[codinome];
-        require(recipient != address(0), "Codinome invalido");
+        address recipient = codenameToAddress[codename];
+        require(recipient != address(0), ERR_NOT_A_VALID_USER);
 
-        uint256 saTurings = quantidade * turing;
+        uint256 saTurings = qtd * turing;
         _mint(recipient, saTurings);
-        emit VoteCast(recipient, codinome, saTurings);
+        emit VoteCast(recipient, codename, saTurings);
     }
 
-    function vote(string memory codinome, uint256 quantidade) public {
-        require(isAuthorized[msg.sender] == true || msg.sender == owner, "Usuario nao autorizado");
-        require(votingEnabled, "A votacao esta desativada");
+    function vote(string memory codename, uint256 qtd) public {
         require(
-            totalVotes[msg.sender] < MAX_VOTES,
-            "Voce ja usou todos os seus votos"
+            isAuthorized[msg.sender] == true || msg.sender == owner,
+            ERR_NOT_AUTHORIZED
         );
-        address recipient = codenameToAddress[codinome];
-        require(recipient != address(0), "Usuario nao eh candidato");
-        require(recipient != msg.sender, "Nao pode votar em si mesmo");
+        require(votingEnabled, ERR_VOTING_DISABLED);
+        require(totalVotes[msg.sender] < MAX_VOTES, ERR_VOTE_LIMIT_REACHED);
+        address recipient = codenameToAddress[codename];
+        require(recipient != address(0), ERR_NOT_A_VALID_USER);
+        require(recipient != msg.sender, ERR_CANNOT_VOTE_SELF);
 
-        require(
-            !hasVotedFor[msg.sender][recipient],
-            "Voce ja votou nesse usuario"
-        );
+        require(!hasVotedFor[msg.sender][recipient], ERR_DUPLICATE_VOTE);
 
-        uint256 saTurings = quantidade * turing;
-        require(saTurings <= 2 * turing, "Maximo permitido e 2 Turings");
+        uint256 saTurings = qtd * turing;
+        require(saTurings <= 2 * turing, ERR_MAX_TURINGS_EXCEEDED);
 
         _mint(recipient, saTurings);
         _mint(msg.sender, saTurings / 5); //0.2 * 10^18 = 0.2 TUR
@@ -127,7 +144,7 @@ contract Turing is ERC20 {
         totalVotes[msg.sender] += 1;
         hasVotedFor[msg.sender][recipient] = true;
 
-        emit VoteCast(recipient, codinome, saTurings);
+        emit VoteCast(recipient, codename, saTurings);
     }
 
     function votingOn() external onlyOwnerOrProfessor {
@@ -140,8 +157,8 @@ contract Turing is ERC20 {
 
     modifier onlyOwnerOrProfessor() {
         require(
-            msg.sender == owner || msg.sender == professor, // [] Adicionar o token da professora
-            "Apenas o owner ou a professora podem executar esta acao"
+            msg.sender == owner || msg.sender == professor,
+            ERR_ONLY_OWNER_OR_PROFESSOR
         );
         _;
     }
