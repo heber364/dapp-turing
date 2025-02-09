@@ -103,7 +103,7 @@ export default function Home() {
       await requestAccount();
       const transaction = await contract.issueToken(codename, turings);
       await transaction.wait();
-      toast.success("Turings enviados.");
+      toast.success("Turings emitidos.");
       console.log(`${turings} Turing has been sent to ${codename}`);
     } catch (error) {
       const errorMessage = getErrorMessage(error)
@@ -154,62 +154,57 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-      <h1 className="text-2xl font-bold mb-4">DApp - Gestão de Turings</h1>
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-
-        <label className="block mb-2">Insira um Codenome:</label>
+    <div className="bg-gray-50 min-h-screen w-full flex flex-col items-center py-10">
+    <h1 className="text-3xl font-semibold mb-6 text-gray-700">Votação - Turing</h1>
+    <div className="flex gap-8 items-start p-6 w-full max-w-4xl">
+      
+      {/* Formulário */}
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md border border-gray-200">
+        <label className="block mb-2 text-gray-600 font-medium">Insira um Codenome:</label>
         <input
-          className="w-full p-2 border rounded mb-4"
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-300 mb-4"
           value={codename}
           onChange={(e) => setCodename(e.target.value)}
-        ></input>
-
-        <label className="block mb-2">Quantidade de Turings:</label>
+        />
+  
+        <label className="block mb-2 text-gray-600 font-medium">Quantidade de Turings:</label>
         <input
           type="number"
-          className="w-full p-2 border rounded mb-4"
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-300 mb-4"
           value={turings}
           onChange={(e) => setTurings(e.target.value)}
         />
-
-        <button
-          className="w-full bg-blue-500 text-white py-2 rounded mb-2 hover:bg-blue-600"
-          onClick={() => issueToken()}
-        >
-          Issue Token
+  
+        <button className="w-full bg-blue-500 text-white py-2 rounded-lg mb-2 hover:bg-blue-600 transition" onClick={() => issueToken()}>
+          Emitir Token
         </button>
-        <button
-          className="w-full bg-green-500 text-white py-2 rounded mb-2 hover:bg-green-600"
-          onClick={() => vote()}
-        >
-          Vote
+        <button className="w-full bg-green-500 text-white py-2 rounded-lg mb-2 hover:bg-green-600 transition" onClick={() => vote()}>
+          Votar
         </button>
-        <button
-          className="w-full bg-yellow-500 text-white py-2 rounded mb-2 hover:bg-yellow-600"
-          onClick={() => votingOn()}
-        >
-          Voting On
+        <button className="w-full bg-yellow-500 text-white py-2 rounded-lg mb-2 hover:bg-yellow-600 transition" onClick={() => votingOn()}>
+          Iniciar Votação
         </button>
-        <button
-          className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"
-          onClick={() => votingOff()}
-        >
-          Voting Off
+        <button className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition" onClick={() => votingOff()}>
+          Encerrar Votação
         </button>
       </div>
-
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md mt-6">
-        <h2 className="text-xl font-semibold mb-4">Ranking de Usuários</h2>
+  
+      {/* Ranking */}
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md border border-gray-200">
+        <h2 className="text-xl font-medium mb-4 text-gray-700">Ranking de Usuários</h2>
         <ul>
           {users.map((user, index) => (
-            <li key={index} className="flex justify-between py-2 border-b">
+            <li key={index} className="flex justify-between py-2 border-b last:border-none text-gray-600">
               <span>{user.codename}</span>
-              <span>{user.turing} Turings</span>
+              <span className="font-medium">{user.turing} Turings</span>
             </li>
           ))}
         </ul>
       </div>
+  
     </div>
+  </div>
+  
+
   );
 }
