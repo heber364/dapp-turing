@@ -27,21 +27,25 @@ export default function Home() {
   const [users, setUsers] = useState<{ codename: string; address: string; turing: string }[]>([]);
 
   useEffect(() => {
-    const newProvider = new ethers.providers.Web3Provider(window.ethereum);
-    //const newProvider = new ethers.providers.JsonRpcProvider(LOCAL_BLOCKCHAIN_URL);
-    const newSigner = newProvider.getSigner();
-    console.log(newSigner);
-    setProvider(newProvider);
-    setSigner(newSigner);
-    const newContract = new ethers.Contract(
-      TURING_ADDRESS,
-      TuringArtifact.abi,
-      newSigner
-    );
-    setContract(newContract);
-    getUsers(newContract);
-    listenForVoteEvents(newContract)
-    listenForIssueTokenEvents(newContract)
+    const initialize = async () => {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const newProvider = new ethers.providers.Web3Provider(window.ethereum);
+      //const newProvider = new ethers.providers.JsonRpcProvider(LOCAL_BLOCKCHAIN_URL);
+      const newSigner = newProvider.getSigner();
+      console.log(newSigner);
+      setProvider(newProvider);
+      setSigner(newSigner);
+      const newContract = new ethers.Contract(
+        TURING_ADDRESS,
+        TuringArtifact.abi,
+        newSigner
+      );
+      setContract(newContract);
+      getUsers(newContract);
+      listenForVoteEvents(newContract)
+      listenForIssueTokenEvents(newContract)
+    };
+    initialize();
   }, []);
 
 
@@ -72,18 +76,26 @@ export default function Home() {
 
 
   async function getUsers(contract: any) {
-    const [names, addresses, balances] = await contract.getAddressesAndBalances();
+    try {
+      const [names, addresses, balances] = await contract.getAddressesAndBalances();
 
-    const formattedParticipants = addresses.map((recipient: any, index: number) => ({
-      codename: names[index],
-      addresses: recipient,
-      turing: parseFloat(ethers.utils.formatEther(balances[index])), // Convertendo para número
-    }));
+      const formattedParticipants = addresses.map((recipient: any, index: number) => ({
+        codename: names[index],
+        addresses: recipient,
+        turing: parseFloat(ethers.utils.formatEther(balances[index])), // Convertendo para número
+      }));
 
-    // Ordenar do maior para o menor saldo de turing
-    formattedParticipants.sort((a: any, b: any) => b.turing - a.turing);
+      // Ordenar do maior para o menor saldo de turing
+      formattedParticipants.sort((a: any, b: any) => b.turing - a.turing);
 
-    setUsers(formattedParticipants);
+      setUsers(formattedParticipants);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error)
+      toast.error(errorMessage ?? "Ocorreu um erro desconhecido.");
+      console.log(error)
+
+    }
+
   }
 
   async function issueToken() {
