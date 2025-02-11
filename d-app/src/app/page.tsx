@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import {  useEffect, useState } from "react";
 
 declare global {
   interface Window {
@@ -13,9 +13,7 @@ import toast from "react-hot-toast";
 import { getErrorMessage } from "@/helper/getErrorMessage";
 const TURING_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
-const LOCAL_BLOCKCHAIN_URL = "http://127.0.0.1:8545";
-
-
+type User = { codename: string; address: string; turing: number };
 
 export default function Home() {
   const [provider, setProvider] = useState<any>();
@@ -24,15 +22,18 @@ export default function Home() {
 
   const [codename, setCodename] = useState("");
   const [turings, setTurings] = useState("");
-  const [users, setUsers] = useState<{ codename: string; address: string; turing: string }[]>([]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [codenames, setCodenames] = useState<string[]>([]);
   useEffect(() => {
     const initialize = async () => {
+      if (!window.ethereum) {
+        toast.error("Por favor, instale a extensão Metamask.");
+        return
+      }
       await window.ethereum.request({ method: "eth_requestAccounts" });
       const newProvider = new ethers.providers.Web3Provider(window.ethereum);
-      //const newProvider = new ethers.providers.JsonRpcProvider(LOCAL_BLOCKCHAIN_URL);
       const newSigner = newProvider.getSigner();
-      console.log(newSigner);
+;
       setProvider(newProvider);
       setSigner(newSigner);
       const newContract = new ethers.Contract(
@@ -54,22 +55,12 @@ export default function Home() {
   }
 
   function listenForVoteEvents(contract: any) {
-    contract.on("VoteCast", async (recipient: any, codinome: any, saTurings: any) => {
-      console.log("Evento VoteCast recebido:", {
-        recipient,
-        codinome,
-        saTurings
-      });
+    contract.on("VoteCast", async () => {
       getUsers(contract);
     });
   };
   function listenForIssueTokenEvents(contract: any) {
-    contract.on("IssueTokenCast", async (recipient: any, codinome: any, saTurings: any) => {
-      console.log("Evento IssueTokenCast recebido:", {
-        recipient,
-        codinome,
-        saTurings
-      });
+    contract.on("IssueTokenCast", async () => {
       getUsers(contract);
     });
   };
@@ -79,16 +70,17 @@ export default function Home() {
     try {
       const [names, addresses, balances] = await contract.getAddressesAndBalances();
 
-      const formattedParticipants = addresses.map((recipient: any, index: number) => ({
+      const formattedUsers: User[] = addresses.map((recipient: any, index: number) => ({
         codename: names[index],
         addresses: recipient,
-        turing: parseFloat(ethers.utils.formatEther(balances[index])), // Convertendo para número
+        turing: parseFloat(ethers.utils.formatEther(balances[index])),
       }));
 
-      // Ordenar do maior para o menor saldo de turing
-      formattedParticipants.sort((a: any, b: any) => b.turing - a.turing);
+      setCodenames(formattedUsers.map((user) => user.codename));
+      setCodename(formattedUsers[0].codename);
+      formattedUsers.sort((a: User, b: User) => b.turing - a.turing);
 
-      setUsers(formattedParticipants);
+      setUsers(formattedUsers);
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       toast.error(errorMessage ?? "Ocorreu um erro desconhecido.");
@@ -100,11 +92,15 @@ export default function Home() {
 
   async function issueToken() {
     try {
+      if (!window.ethereum) {
+        toast.error("Por favor, instale a extensão Metamask.");
+        return
+      }
       await requestAccount();
-      const transaction = await contract.issueToken(codename, turings);
+      const saturings = ethers.utils.parseUnits(turings.toString(), 18);
+      const transaction = await contract.issueToken(codename, saturings);
       await transaction.wait();
       toast.success("Turings emitidos.");
-      console.log(`${turings} Turing has been sent to ${codename}`);
     } catch (error) {
       const errorMessage = getErrorMessage(error)
       toast.error(errorMessage ?? "Ocorreu um erro desconhecido.");
@@ -114,11 +110,15 @@ export default function Home() {
 
   async function vote() {
     try {
+      if (!window.ethereum) {
+        toast.error("Por favor, instale a extensão Metamask.");
+        return
+      }
       await requestAccount();
-      const transaction = await contract.vote(codename, turings);
+      const saturings = ethers.utils.parseUnits(turings.toString(), 18);
+      const transaction = await contract.vote(codename, saturings);
       await transaction.wait();
       toast.success("Votação realizada.");
-      console.log(transaction);
     } catch (error: any) {
       const errorMessage = getErrorMessage(error)
       toast.error(errorMessage ?? "Ocorreu um erro desconhecido.");
@@ -129,6 +129,10 @@ export default function Home() {
 
   async function votingOn() {
     try {
+      if (!window.ethereum) {
+        toast.error("Por favor, instale a extensão Metamask.");
+        return
+      }
       await requestAccount();
       const transaction = await contract.votingOn();
       await transaction.wait();
@@ -142,6 +146,10 @@ export default function Home() {
 
   async function votingOff() {
     try {
+      if (!window.ethereum) {
+        toast.error("Por favor, instale a extensão Metamask.");
+        return
+      }
       await requestAccount();
       const transaction = await contract.votingOff();
       await transaction.wait();
@@ -160,12 +168,21 @@ export default function Home() {
       
       {/* Formulário */}
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md border border-gray-200">
-        <label className="block mb-2 text-gray-600 font-medium">Insira um Codenome:</label>
-        <input
+        <label className="block mb-2 text-gray-600 font-medium">Selecione um codinome:</label>
+        {/* <input
           className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-300 mb-4"
           value={codename}
           onChange={(e) => setCodename(e.target.value)}
-        />
+        /> */}
+        <select
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-gray-300 mb-4"
+          value={codename}
+          onChange={(e) => setCodename(e.target.value)}
+        >
+          {codenames.map((codename) => (
+            <option key={codename} value={codename}>{codename}</option>
+          ))}
+        </select>
   
         <label className="block mb-2 text-gray-600 font-medium">Quantidade de Turings:</label>
         <input
@@ -193,12 +210,12 @@ export default function Home() {
       <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md border border-gray-200">
         <h2 className="text-xl font-medium mb-4 text-gray-700">Ranking de Usuários</h2>
         <ul>
-          {users.map((user, index) => (
+          {users ? users.map((user, index) => (
             <li key={index} className="flex justify-between py-2 border-b last:border-none text-gray-600">
               <span>{user.codename}</span>
               <span className="font-medium">{user.turing} Turings</span>
             </li>
-          ))}
+          )): <span>Carregando...</span>}
         </ul>
       </div>
   
